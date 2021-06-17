@@ -23,6 +23,8 @@ typedef struct login_creds
 
 char* respond;
 int is_root = 0;
+creds login;
+char* current_database;
 
 char* getQueryType(char query[])
 {
@@ -100,6 +102,82 @@ void create_handler(char query[])
 	}
 }
 
+void grant_handler(char query[])
+{
+	if (!is_root)
+	{
+		respond = "Cannot execute the command";
+		return;
+	}
+	char database[510];
+	char uname[510];
+	char trash[510];
+	sscanf(query,"%s %s %s %s %s;",trash,trash,database,trash,uname);
+	int ix = strlen(uname) - 1;
+	memmove(&uname[ix],&uname[ix+1],strlen(uname)-ix);
+	FILE* f;
+	f = fopen("database/tables/permission.csv","a");
+	fprintf(f,"%s;%s\n",database,uname);
+	fclose(f);
+	respond = "Permission Granted";
+}
+
+void use_handler(char query[])
+{
+	char database[510];
+	char uname[510];
+	char trash[510];
+	strcpy(uname,login.id);
+	sscanf(query,"%s %s",trash,database);
+	int ix = strlen(database) - 1;
+	memmove(&database[ix],&database[ix+1],strlen(database)-ix);
+	FILE* f;
+	f = fopen("database/tables/available_database.txt","r");
+	int ada = 0;
+	char buffer[510];
+	while (fscanf(f,"%s",buffer) != EOF)
+	{
+		if (strcmp(buffer,database) == 0)
+		{
+			ada = 1;
+			break;
+		}
+	}
+	fclose(f);
+	if (ada)
+	{
+		f = fopen("database/tables/permission.csv","r");
+		int bisa = 0;
+		while (fscanf(f,"%s",buffer) != EOF)
+		{
+			char db[510];
+			char id[510];
+			char cc;
+			sscanf(buffer,"%[^;] %c %[^\n]",db,&cc,id);
+			if (strcmp(db,database) == 0 && strcmp(id,uname) == 0)
+			{
+				bisa = 1;
+				break;
+			}
+		}
+		fclose(f);
+		if (bisa)
+		{
+			current_database = database;
+			respond = "Command executed succesfully";
+			return;
+		}
+		else
+		{
+			respond = "User doesnt have privilege";
+			return;
+		}
+	}
+	else
+	{
+		respond = "Database doesn't exist";
+	}
+}
 
 int main(int argc, char const *argv[])
 {
@@ -146,7 +224,6 @@ int main(int argc, char const *argv[])
         perror("accept");
         exit(EXIT_FAILURE);
     }
-	creds login;
 	int logged_in = 0;
 	while (1)
 	{
@@ -198,13 +275,11 @@ int main(int argc, char const *argv[])
 				if (!ada)
 				{
 					strcpy(message,"User Not Found!");
-					continue;
 				}
 				else
 				if (!benar)
 				{
 					strcpy(message,"Password Incorrect!");
-					continue;
 				}
 				else
 				{
@@ -238,7 +313,7 @@ int main(int argc, char const *argv[])
 				perror("Failed to Receive Query");
 				exit(EXIT_FAILURE);
 			}
-			printf("%s\n",queryBuffer);
+			printf("%s -> query\n",queryBuffer);
 			char query[5010];
 			strcpy(query,queryBuffer);
 			char* queryType = getQueryType(queryBuffer);
@@ -251,7 +326,28 @@ int main(int argc, char const *argv[])
 					perror("Failed Sending Create User Message");
 					exit(EXIT_FAILURE);
 				}
-				break;
+			}
+			else
+			if (strcmp(queryType,"GRANT") == 0)
+			{
+				grant_handler(query);
+				printf("%s\n",respond);
+				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
+				{
+					perror("Failed Sending Create User Message");
+					exit(EXIT_FAILURE);
+				}
+			}
+			else
+			if (strcmp(queryType,"USE") == 0)
+			{
+				use_handler(query);
+				printf("%s\n",respond);
+				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
+				{
+					perror("Failed Sending Create User Message");
+					exit(EXIT_FAILURE);
+				}
 			}
 		}
 	}

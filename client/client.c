@@ -109,7 +109,6 @@ int main(int argc, char const *argv[])
 				exit(EXIT_FAILURE);
 			}
 			printf("%s\n",respond);
-			break;
 		}
 	}
 }
