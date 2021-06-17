@@ -24,7 +24,7 @@ typedef struct login_creds
 char* respond;
 int is_root = 0;
 creds login;
-char* current_database;
+char* current_database = "";
 
 char* getQueryType(char query[])
 {
@@ -125,6 +125,61 @@ void create_database(char query[])
 	}
 }
 
+void create_table(char query[])
+{
+	if (strlen(current_database) == 0)
+	{
+		respond = "No active database";
+		return;
+	}
+	char buffer[510];
+	strcpy(buffer,query);
+	printf("Masuk table\n");
+	char* tableName;
+	char* token;
+	token = strtok(buffer," ");
+	for (int i = 0 ; i < 2 ; i++)
+	{
+		token = strtok(NULL," ");
+	}
+	tableName = token;
+	char* queryElements = strrchr(query,'(');
+	int ix = strlen(queryElements) - 1;
+	memmove(&queryElements[ix],&queryElements[ix+1],strlen(queryElements)-ix);
+	ix = strlen(queryElements) - 1;
+	memmove(&queryElements[ix],&queryElements[ix+1],strlen(queryElements)-ix);
+	memmove(&queryElements[0],&queryElements[1],strlen(queryElements) - 0);
+	char buffer2[510];
+	strcpy(buffer2,current_database);
+
+	char path[10010];
+	strcpy(path,"database/tables/");
+	strcat(path,buffer2);
+	strcat(path,"/");
+	strcat(path,tableName);
+	strcat(path,".csv");
+
+	token = strtok(queryElements,", ");
+	int ambil = 1;
+	char tulis[10010];
+	while( token != NULL ) 
+	{
+		if (ambil)
+		{
+			strcat(tulis,token);
+			strcat(tulis,";");
+		}
+		token = strtok(NULL, ", ");
+		ambil ^= 1;
+   	}
+	ix = strlen(tulis) - 1;
+	memmove(&tulis[ix],&tulis[ix+1],strlen(tulis)-ix);
+	FILE* f;
+	f = fopen(path,"a");
+	fprintf(f,"%s\n",tulis);
+	fclose(f);
+}
+
 void create_handler(char query[])
 {
 	char* tmp;
@@ -146,6 +201,14 @@ void create_handler(char query[])
 	if (tmp != NULL)
 	{
 		create_database(query);
+	}
+
+	//CREATE TABLE
+	tmp = strstr(query,"TABLE");
+	if (tmp != NULL)
+	{
+		create_table(query);
+		exit(0);
 	}
 }
 
@@ -228,6 +291,7 @@ void use_handler(char query[])
 
 int main(int argc, char const *argv[])
 {
+	umask(0);
 	int server_fd, new_socket, valread;
 	struct sockaddr_in address;
 	int opt = 1;
