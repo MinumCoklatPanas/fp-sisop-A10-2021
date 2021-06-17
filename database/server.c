@@ -86,11 +86,50 @@ void create_user(char query[])
 	}
 }
 
+void create_database(char query[])
+{
+	char database[510];
+	char trash[510];
+	sscanf(query,"%s %s %[^;]",trash,trash,database);
+
+	FILE* f;
+	f = fopen("database/tables/available_database.txt","r");
+	int ada = 0;
+	char buffer[510];
+	while (fscanf(f,"%s",buffer) != EOF)
+	{
+		if (strcmp(buffer,database) == 0)
+		{
+			ada = 1;
+			break;
+		}
+	}
+	fclose(f);
+	if (ada)
+	{
+		respond = "Database already exist";
+	}
+	else
+	{
+		// printf("Masuk");
+		respond = "Database created";
+		f = fopen("database/tables/available_database.txt","a");
+		fprintf(f,"%s\n",database);
+		fclose(f);
+		f = fopen("database/tables/permission.csv","a");
+		fprintf(f,"%s;%s\n",database,login.id);
+		fclose(f);
+		char path[510];
+		sprintf(path,"database/tables/%s",database);
+		mkdir(path,0777);
+	}
+}
+
 void create_handler(char query[])
 {
 	char* tmp;
+	//CREATE USER
 	tmp = strstr(query,"USER");
-	char* ret;
 	if (tmp != NULL)
 	{
 		if (!is_root)
@@ -99,6 +138,14 @@ void create_handler(char query[])
 			return;
 		}
 		create_user(query);
+		return;
+	}
+
+	//CREATE DATABASE
+	tmp = strstr(query,"DATABASE");
+	if (tmp != NULL)
+	{
+		create_database(query);
 	}
 }
 
