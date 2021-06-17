@@ -323,6 +323,20 @@ void drop_database(char query[])
 	execute(argv,path);
 }
 
+void drop_table(char query[])
+{
+	char trash[510];
+	char tableName[510];
+	sscanf(query,"%s %s %s",trash,trash,tableName);
+	int ix = strlen(tableName) - 1;
+	memmove(&tableName[ix],&tableName[ix+1],strlen(tableName)-ix);
+	char fpath[10010];
+	sprintf(fpath,"database/tables/%s/%s.csv",current_database,tableName);
+	char* argv[] = {"rm","-r",fpath,NULL};
+	char path[] = "/bin/rm";
+	execute(argv,path);
+}
+
 void drop_handler(char query[])
 {
 	char* tmp;
@@ -331,6 +345,13 @@ void drop_handler(char query[])
 	if (tmp != NULL)
 	{
 		drop_database(query);
+	}
+
+	//DROP TABLE
+	tmp = strstr(query,"TABLE");
+	if (tmp != NULL)
+	{
+		drop_table(query);
 	}
 }
 
