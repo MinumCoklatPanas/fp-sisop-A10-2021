@@ -5,6 +5,14 @@
 #include <stdlib.h>
 #include <netinet/in.h>
 #include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <syslog.h>
+#include <time.h>
+#include <wait.h>
+#include <dirent.h>
 #define PORT 8080
 #define REGISTER 0
 #define LOGIN 1
@@ -208,7 +216,6 @@ void create_handler(char query[])
 	if (tmp != NULL)
 	{
 		create_table(query);
-		exit(0);
 	}
 }
 
@@ -286,6 +293,44 @@ void use_handler(char query[])
 	else
 	{
 		respond = "Database doesn't exist";
+	}
+}
+
+void execute(char *arg[],char path[])
+{
+    pid_t pid;
+    int status;
+    pid = fork();
+    if (pid == 0)
+    {
+        execv(path,arg);
+    }
+    while (wait(&status) > 0);
+    return;
+}
+
+void drop_database(char query[])
+{
+	char trash[510];
+	char dbName[510];
+	sscanf(query,"%s %s %s",trash,trash,dbName);
+	int ix = strlen(dbName) - 1;
+	memmove(&dbName[ix],&dbName[ix+1],strlen(dbName)-ix);
+	char fpath[10010];
+	sprintf(fpath,"database/tables/%s",dbName);
+	char* argv[] = {"rm","-r",fpath,NULL};
+	char path[] = "/bin/rm";
+	execute(argv,path);
+}
+
+void drop_handler(char query[])
+{
+	char* tmp;
+	//DROP DATABASE
+	tmp = strstr(query,"DATABASE");
+	if (tmp != NULL)
+	{
+		drop_database(query);
 	}
 }
 
@@ -453,6 +498,17 @@ int main(int argc, char const *argv[])
 			if (strcmp(queryType,"USE") == 0)
 			{
 				use_handler(query);
+				printf("%s\n",respond);
+				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
+				{
+					perror("Failed Sending Create User Message");
+					exit(EXIT_FAILURE);
+				}
+			}
+			else
+			if (strcmp(queryType,"DROP") == 0)
+			{
+				drop_handler(query);
 				printf("%s\n",respond);
 				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
 				{
