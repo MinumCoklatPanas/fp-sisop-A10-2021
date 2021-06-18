@@ -469,13 +469,13 @@ void drop_handler(char query[])
 	}
 }
 
-void drop_without_where(char query[])
+void delete_without_where(char query[])
 {
 	char trash[510];
 	char tableName[510];
 	sscanf(query,"%s %s %[^;]",trash,trash,tableName);
 
-	if (current_database == NULL)
+	if (strlen(current_database) == 0)
 	{
 		respond = "No active database";
 		return;
@@ -520,7 +520,7 @@ void delete_handler(char query[])
 	}
 	else
 	{
-		drop_without_where(query);
+		delete_without_where(query);
 	}
 }
 
@@ -599,6 +599,120 @@ void insert_handler(char query[])
 	fprintf(f,"%s\n",tulis);
 	fclose(f);
 	respond = "Row added";
+}
+
+void update_without_where(char query[])
+{
+	char trash[510];
+	char tableName[510];
+	char columnName[510];
+	char newVal[510];
+	char tmp;
+	sscanf(query,"%s %s %s %[^=]%c%[^;]",trash,tableName,trash,columnName,&tmp,newVal);
+	printf("%s - %s - %s\n",tableName,columnName,newVal);
+
+	FILE* f;
+	char path[10010];
+	sprintf(path,"database/tables/%s/available_tables.txt",current_database);
+	f = fopen(path,"r+");
+	int ada = 0;
+	char buffer[510];
+	while (fscanf(f,"%s",buffer) != EOF)
+	{
+		if (strcmp(buffer,tableName) == 0)
+		{
+			ada = 1;
+			break;
+		}
+	}
+	fclose(f);
+	if (!ada)
+	{
+		respond = "Table does not exist";
+		return;
+	}
+	sprintf(path,"database/tables/%s/%s.csv",current_database,tableName);
+	f = fopen(path,"r");
+	char columns[510];
+	fscanf(f,"%s",columns);
+	fclose(f);
+	int ix = -1;
+	char* token;
+	token = strtok(columns,";");
+	int cur = 0;
+	while (ix == -1 && token != NULL)
+	{
+		printf("%s\n",token);
+		if (strcmp(token,columnName) == 0)
+		{
+			ix = cur;
+			break;
+		}
+		token = strtok(NULL,";");
+		++cur;
+	}
+	if (ix == -1)
+	{
+		respond = "Column does not exist";
+		return;
+	}
+	f = fopen(path,"r");
+	char columnBuffer[510];
+	fscanf(f,"%s",columns);
+	strcpy(columnBuffer,columns);
+	char simpan[55][55][55];
+	int ixSimpan = 0;
+	int columnCount = 0;
+	while (fscanf(f,"%s",columns) != EOF)
+	{
+		int curIx = 0;
+		token = strtok(columns,";");
+		while (token != NULL)
+		{
+			strcpy(simpan[ixSimpan][curIx],token);
+			token = strtok(NULL,";");
+			++curIx;
+		}
+		strcpy(simpan[ixSimpan][ix],newVal);
+		++ixSimpan;
+		columnCount = curIx;
+	}
+	fclose(f);
+	// printf("%d %d\n",ixSimpan,columnCount);
+	f = fopen(path,"w");
+	fprintf(f,"%s\n",columnBuffer);
+	for (int i = 0 ; i < ixSimpan ; i++)
+	{
+		for (int j = 0 ; j < columnCount ; j++)
+		{
+			fprintf(f,"%s",simpan[i][j]);
+			if (j == columnCount - 1)
+				fprintf(f,"\n");
+			else
+				fprintf(f,";");
+		}
+	}
+	fclose(f);
+	respond = "Rows updated";
+}
+
+void update_handler(char query[])
+{
+	if (strlen(current_database) == 0)
+	{
+		respond = "No active database";
+		return;
+	}
+	char* tmp;
+	tmp = strstr(query,"WHERE");
+	if (tmp == NULL)
+	{
+		update_without_where(query);
+	}
+	else
+	{
+
+	}
 }
 
 int main(int argc, char const *argv[])
@@ -804,6 +918,18 @@ int main(int argc, char const *argv[])
 			{
 				write_log(query);
 				insert_handler(query);
+				printf("%s\n",respond);
+				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
+				{
+					perror("Failed Sending Create User Message");
+					exit(EXIT_FAILURE);
+				}
+			}
+			else
+			if (strcmp(queryType,"UPDATE") == 0)
+			{
+				write_log(query);
+				update_handler(query);
 				printf("%s\n",respond);
 				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
 				{
