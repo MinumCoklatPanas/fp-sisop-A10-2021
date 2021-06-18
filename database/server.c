@@ -457,6 +457,61 @@ void drop_handler(char query[])
 	}
 }
 
+void drop_without_where(char query[])
+{
+	char trash[510];
+	char tableName[510];
+	sscanf(query,"%s %s %[^;]",trash,trash,tableName);
+
+	if (current_database == NULL)
+	{
+		respond = "No active database";
+		return;
+	}
+	char fpath[10010];
+	sprintf(fpath,"database/tables/%s/available_tables.txt",current_database);
+	FILE* f;
+	f = fopen(fpath,"r");
+	char buffer[510];
+	int ada = 0;
+	while (fscanf(f,"%s",buffer) != EOF)
+	{
+		if (strcmp(buffer,tableName) == 0)
+		{
+			ada = 1;
+			break;
+		}
+	}
+	fclose(f);
+	if (!ada)
+	{
+		respond = "Table does not exist";
+		return;
+	}
+	sprintf(fpath,"database/tables/%s/%s.csv",current_database,tableName);
+	f = fopen(fpath,"r");
+	fscanf(f,"%s",buffer);
+	fclose(f);
+	f = fopen(fpath,"w");
+	fprintf(f,"%s\n",buffer);
+	fclose(f);
+	respond = "Rows dropped";
+}
+
+void delete_handler(char query[])
+{
+	char* tmp;
+	tmp = strstr(query,"WHERE");
+	if (tmp != NULL)
+	{
+
+	}
+	else
+	{
+		drop_without_where(query);
+	}
+}
+
 int main(int argc, char const *argv[])
 {
 	umask(0);
@@ -632,6 +687,27 @@ int main(int argc, char const *argv[])
 			if (strcmp(queryType,"DROP") == 0)
 			{
 				drop_handler(query);
+				printf("%s\n",respond);
+				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
+				{
+					perror("Failed Sending Create User Message");
+					exit(EXIT_FAILURE);
+				}
+			}
+			else
+			if (strcmp(queryType,"DELETE") == 0)
+			{
+				delete_handler(query);
+				printf("%s\n",respond);
+				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
+				{
+					perror("Failed Sending Create User Message");
+					exit(EXIT_FAILURE);
+				}
+			}
+			else
+			{
+				respond = "Invalid command";
 				printf("%s\n",respond);
 				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
 				{
