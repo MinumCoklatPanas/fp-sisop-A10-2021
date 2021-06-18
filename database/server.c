@@ -22,6 +22,14 @@
 #define SEE 3
 #define FIND 4
 
+/*
+	to-do list:
+	-error handling drop table
+	-error handling drop database
+	-respond message drop table
+	-respond message drop database
+*/
+
 typedef struct login_creds
 {
     char id[110];
@@ -316,11 +324,48 @@ void drop_database(char query[])
 	sscanf(query,"%s %s %s",trash,trash,dbName);
 	int ix = strlen(dbName) - 1;
 	memmove(&dbName[ix],&dbName[ix+1],strlen(dbName)-ix);
+
+	FILE* f;
+	f = fopen("database/tables/available_database.txt","r+");
+	char simpan[510][510];
+	ix = 0;
+	char buffer[510];
+	int ada = 0;
+	while (fscanf(f,"%s",buffer) != EOF)
+	{
+		if (strcmp(buffer,dbName) != 0)
+		{
+			strcpy(simpan[ix],buffer);
+			ix++;
+			printf("masuk %s\n",buffer);
+		}
+		else
+			ada = 1;
+	}
+	
+	if (!ada)
+	{
+		respond = "Database does not exist";
+		return;
+	}
+	fclose(f);
+
+	f = fopen("database/tables/available_database.txt","w");
+	for (int i = 0 ; i < ix ; i++)
+	{
+		fprintf(f,"%s\n",simpan[i]);
+	}
+
+	fclose(f);
+	
 	char fpath[10010];
 	sprintf(fpath,"database/tables/%s",dbName);
 	char* argv[] = {"rm","-r",fpath,NULL};
 	char path[] = "/bin/rm";
 	execute(argv,path);
+
+
+	respond = "Database dropped";
 }
 
 void drop_table(char query[])
