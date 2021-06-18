@@ -524,6 +524,83 @@ void delete_handler(char query[])
 	}
 }
 
+void insert_handler(char query[])
+{
+	if (strlen(current_database) == 0)
+	{
+		respond = "No active database";
+		return;
+	}
+	char buffer[510];
+	strcpy(buffer,query);
+	char* tableName;
+	char* token;
+	token = strtok(buffer," ");
+	for (int i = 0 ; i < 2 ; i++)
+	{
+		token = strtok(NULL," ");
+	}
+	tableName = token;
+	char* queryElements = strrchr(query,'(');
+	int ix = strlen(queryElements) - 1;
+	memmove(&queryElements[ix],&queryElements[ix+1],strlen(queryElements)-ix);
+	ix = strlen(queryElements) - 1;
+	memmove(&queryElements[ix],&queryElements[ix+1],strlen(queryElements)-ix);
+	memmove(&queryElements[0],&queryElements[1],strlen(queryElements) - 0);
+	char buffer2[510];
+	strcpy(buffer2,current_database);
+
+	char path[10010];
+	strcpy(path,"database/tables/");
+	strcat(path,buffer2);
+	strcat(path,"/");
+	strcat(path,"available_tables.txt");
+	printf("%s\n",path);
+
+	FILE* f;
+	f = fopen(path,"r+");
+	int ada = 0;
+	while (fscanf(f,"%s",buffer) != EOF)
+	{
+		if (strcmp(buffer,tableName) == 0)
+		{
+			ada = 1;
+			break;
+		}
+	}
+	fclose(f);
+	if (!ada)
+	{
+		respond = "Table does not exist";
+		return;
+	}
+
+	strcpy(path,"database/tables/");
+	strcat(path,buffer2);
+	strcat(path,"/");
+	strcat(path,tableName);
+	strcat(path,".csv");
+
+	token = strtok(queryElements,", ");
+	int ambil = 1;
+	char tulis[10010];
+	while( token != NULL ) 
+	{
+		if (ambil)
+		{
+			strcat(tulis,token);
+			strcat(tulis,";");
+		}
+		token = strtok(NULL, ", ");
+   	}
+	ix = strlen(tulis) - 1;
+	memmove(&tulis[ix],&tulis[ix+1],strlen(tulis)-ix);
+	f = fopen(path,"a");
+	fprintf(f,"%s\n",tulis);
+	fclose(f);
+	respond = "Row added";
+}
+
 int main(int argc, char const *argv[])
 {
 	umask(0);
@@ -715,6 +792,18 @@ int main(int argc, char const *argv[])
 			{
 				write_log(query);
 				delete_handler(query);
+				printf("%s\n",respond);
+				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
+				{
+					perror("Failed Sending Create User Message");
+					exit(EXIT_FAILURE);
+				}
+			}
+			else
+			if (strcmp(queryType,"INSERT") == 0)
+			{
+				write_log(query);
+				insert_handler(query);
 				printf("%s\n",respond);
 				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
 				{
