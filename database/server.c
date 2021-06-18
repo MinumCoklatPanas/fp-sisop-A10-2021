@@ -22,12 +22,6 @@
 #define SEE 3
 #define FIND 4
 
-/*
-	to-do list:
-	-error handling drop database
-	-respond message drop database
-*/
-
 typedef struct login_creds
 {
     char id[110];
@@ -39,6 +33,24 @@ char* respond;
 int is_root = 0;
 creds login;
 char* current_database = "";
+
+void write_log(char command[])
+{
+	time_t timer;
+	char buffer[5010];
+	struct tm* tm_info;
+
+	timer = time(NULL);
+	tm_info = localtime(&timer);
+	strftime(buffer,5010,"%Y-%m-%d %X:",tm_info);
+	strcat(buffer,login.id);
+	strcat(buffer,":");
+	strcat(buffer,command);
+	FILE* f;
+	f = fopen("a.log","a");
+	fprintf(f,"%s\n",buffer);
+	fclose(f);
+}
 
 char* getQueryType(char query[])
 {
@@ -653,6 +665,7 @@ int main(int argc, char const *argv[])
 			char* queryType = getQueryType(queryBuffer);
 			if (strcmp(queryType,"CREATE") == 0)
 			{
+				write_log(query);
 				create_handler(query);
 				printf("%s\n",respond);
 				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
@@ -664,6 +677,7 @@ int main(int argc, char const *argv[])
 			else
 			if (strcmp(queryType,"GRANT") == 0)
 			{
+				write_log(query);
 				grant_handler(query);
 				printf("%s\n",respond);
 				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
@@ -675,6 +689,7 @@ int main(int argc, char const *argv[])
 			else
 			if (strcmp(queryType,"USE") == 0)
 			{
+				write_log(query);
 				use_handler(query);
 				printf("%s\n",respond);
 				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
@@ -686,6 +701,7 @@ int main(int argc, char const *argv[])
 			else
 			if (strcmp(queryType,"DROP") == 0)
 			{
+				write_log(query);
 				drop_handler(query);
 				printf("%s\n",respond);
 				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
@@ -697,6 +713,7 @@ int main(int argc, char const *argv[])
 			else
 			if (strcmp(queryType,"DELETE") == 0)
 			{
+				write_log(query);
 				delete_handler(query);
 				printf("%s\n",respond);
 				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
