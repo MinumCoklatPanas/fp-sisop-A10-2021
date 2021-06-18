@@ -510,13 +510,124 @@ void delete_without_where(char query[])
 	respond = "Rows dropped";
 }
 
+void delete_with_where(char query[])
+{
+	char trash[510];
+	char tableName[510];
+	char columnName[510];
+	char value[510];
+	char tmp;
+	sscanf(query,"%s %s %s %s %[^=]%c%[^;]",trash,trash,tableName,trash,columnName,&tmp,value);
+	char path[1010];
+	sprintf(path,"database/tables/%s/available_tables.txt",current_database);
+	FILE* f;
+	f = fopen(path,"r");
+	int ada = 0;
+	while (fscanf(f,"%s",trash) != EOF)
+	{
+		if (strcmp(trash,tableName) == 0)
+		{
+			ada = 1;
+			break;
+		}
+	}
+	fclose(f);
+	if (!ada)
+	{
+		respond = "Table does not exist";
+		return;
+	}
+
+	sprintf(path,"database/tables/%s/%s.csv",current_database,tableName);
+	f = fopen(path,"r");
+	char columns[510];
+	fscanf(f,"%s",columns);
+	fclose(f);
+	int ix = -1;
+	char* token;
+	token = strtok(columns,";");
+	int cur = 0;
+	while (ix == -1 && token != NULL)
+	{
+		printf("%s\n",token);
+		if (strcmp(token,columnName) == 0)
+		{
+			ix = cur;
+			break;
+		}
+		token = strtok(NULL,";");
+		++cur;
+	}
+	if (ix == -1)
+	{
+		respond = "Column does not exist";
+		return;
+	}
+	f = fopen(path,"r");
+	char columnBuffer[510];
+	fscanf(f,"%s",columns);
+	strcpy(columnBuffer,columns);
+	char simpan[55][55][55];
+	int ixSimpan = 0;
+	int columnCount = 0;
+	while (fscanf(f,"%s",columns) != EOF)
+	{
+		int curIx = 0;
+		token = strtok(columns,";");
+		while (token != NULL)
+		{
+			strcpy(simpan[ixSimpan][curIx],token);
+			token = strtok(NULL,";");
+			++curIx;
+		}
+		++ixSimpan;
+		columnCount = curIx;
+	}
+	fclose(f);
+	// printf("%d %d\n",ixSimpan,columnCount);
+	f = fopen(path,"w");
+	fprintf(f,"%s\n",columnBuffer);
+	for (int i = 0 ; i < ixSimpan ; i++)
+	{
+		char out[510];
+		strcpy(out,"");
+		int can = 1;
+		for (int j = 0 ; j < columnCount ; j++) 
+		{
+			strcat(out,simpan[i][j]);
+			if (j == ix)
+			{
+				if (strcmp(simpan[i][j],value) == 0)
+				{
+					can = 0;
+				}
+			}
+			strcat(out,";");
+		}
+		// printf("%s out\n",out);
+		if (can)
+		{
+			int blkg = strlen(out) - 1;
+			memmove(&out[blkg],&out[blkg+1],strlen(out)-blkg);
+			fprintf(f,"%s\n",out);
+		}
+	}
+	fclose(f);
+	respond = "Row deleted";
+}
+
 void delete_handler(char query[])
 {
+	if (strlen(current_database) == 0)
+	{
+		respond = "No active database";
+		return;
+	}
 	char* tmp;
 	tmp = strstr(query,"WHERE");
 	if (tmp != NULL)
 	{
-
+		delete_with_where(query);
 	}
 	else
 	{
@@ -584,6 +695,7 @@ void insert_handler(char query[])
 	token = strtok(queryElements,", ");
 	int ambil = 1;
 	char tulis[10010];
+	strcpy(tulis,"");
 	while( token != NULL ) 
 	{
 		if (ambil)
