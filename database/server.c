@@ -174,11 +174,11 @@ void create_table(char query[])
 	printf("%s\n",path);
 
 	FILE* f;
-	f = fopen(path,"w+");
+	f = fopen(path,"r+");
 	int ada = 0;
 	while (fscanf(f,"%s",buffer) != EOF)
 	{
-		if (strcmp(buffer,tableName) != 0)
+		if (strcmp(buffer,tableName) == 0)
 		{
 			ada = 1;
 			break;
@@ -406,6 +406,33 @@ void drop_table(char query[])
 	int ix = strlen(tableName) - 1;
 	memmove(&tableName[ix],&tableName[ix+1],strlen(tableName)-ix);
 	char fpath[10010];
+	sprintf(fpath,"database/tables/%s/available_tables.txt",current_database);
+	FILE* f;
+	f = fopen(fpath,"a+");
+	char simpan[510][510];
+	int ada = 0;
+	ix = 0;
+	while (fscanf(f,"%s",trash) != EOF)
+	{
+		if (strcmp(trash,tableName) == 0)
+		{
+			ada = 1;
+		}
+		else
+			strcpy(simpan[ix++],trash);
+	}
+	fclose(f);
+	if (!ada)
+	{
+		respond = "Table does not exist";
+		return;
+	}
+	respond = "Table dropped";
+	f = fopen(fpath,"w");
+	for (int i = 0 ; i < ix ; i++)
+		fprintf(f,"%s\n",simpan[i]);
+	fclose(f);
+
 	sprintf(fpath,"database/tables/%s/%s.csv",current_database,tableName);
 	char* argv[] = {"rm","-r",fpath,NULL};
 	char path[] = "/bin/rm";
