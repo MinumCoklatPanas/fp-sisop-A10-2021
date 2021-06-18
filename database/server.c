@@ -24,9 +24,7 @@
 
 /*
 	to-do list:
-	-error handling drop table
 	-error handling drop database
-	-respond message drop table
 	-respond message drop database
 */
 
@@ -172,6 +170,30 @@ void create_table(char query[])
 	strcpy(path,"database/tables/");
 	strcat(path,buffer2);
 	strcat(path,"/");
+	strcat(path,"available_tables.txt");
+	printf("%s\n",path);
+
+	FILE* f;
+	f = fopen(path,"w+");
+	int ada = 0;
+	while (fscanf(f,"%s",buffer) != EOF)
+	{
+		if (strcmp(buffer,tableName) != 0)
+		{
+			ada = 1;
+			break;
+		}
+	}
+	fclose(f);
+	if (ada)
+	{
+		respond = "Table already exist";
+		return;
+	}
+
+	strcpy(path,"database/tables/");
+	strcat(path,buffer2);
+	strcat(path,"/");
 	strcat(path,tableName);
 	strcat(path,".csv");
 
@@ -190,10 +212,18 @@ void create_table(char query[])
    	}
 	ix = strlen(tulis) - 1;
 	memmove(&tulis[ix],&tulis[ix+1],strlen(tulis)-ix);
-	FILE* f;
 	f = fopen(path,"a");
 	fprintf(f,"%s\n",tulis);
 	fclose(f);
+
+	strcpy(path,"database/tables/");
+	strcat(path,buffer2);
+	strcat(path,"/");
+	strcat(path,"available_tables.txt");
+	fopen(path,"a");
+	fprintf(f,"%s\n",tableName);
+	fclose(f);
+	respond = "Table added";
 }
 
 void create_handler(char query[])
