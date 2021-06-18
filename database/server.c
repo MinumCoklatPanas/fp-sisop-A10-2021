@@ -715,6 +715,69 @@ void update_handler(char query[])
 	}
 }
 
+void select_all(char query[])
+{
+	char trash[510];
+	char tableName[510];
+	sscanf(query,"%s %s %s %[^;]",trash,trash,trash,tableName);
+	printf("%s\n",tableName);
+	char path[10010];
+	sprintf(path,"database/tables/%s/available_tables.txt",current_database);
+	FILE* f;
+	f = fopen(path,"r");
+	int ada = 0;
+	while (fscanf(f,"%s",trash) != EOF)
+	{
+		if (strcmp(trash,tableName) == 0)
+		{
+			ada = 1;
+			break;
+		}
+	}
+	fclose(f);
+	if (!ada)
+	{
+		respond = "Table does not exist";
+		return;
+	}
+	sprintf(path,"database/tables/%s/%s.csv",current_database,tableName);
+	f = fopen(path,"r");
+	char columns[510];
+	while (fscanf(f,"%s",columns) != EOF)
+	{
+		char* token;
+		token = strtok(columns,";");
+		char tmp = "|";
+		while (token != NULL)
+		{
+			printf("%3s |",token);
+			token = strtok(NULL,";");
+		}
+		printf("\n");
+	}
+	respond = "Command executed succesfully";
+	return;
+}
+
+void select_handler(char query[])
+{
+	if (strlen(current_database) == 0)
+	{
+		respond = "No active database";
+		return;
+	}
+	char* tmp;
+	tmp = strstr(query,"*");
+	if (tmp != NULL)
+	{
+		select_all(query);
+	}
+	else
+	{
+
+	}
+}
+
 int main(int argc, char const *argv[])
 {
 	umask(0);
@@ -930,6 +993,18 @@ int main(int argc, char const *argv[])
 			{
 				write_log(query);
 				update_handler(query);
+				printf("%s\n",respond);
+				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
+				{
+					perror("Failed Sending Create User Message");
+					exit(EXIT_FAILURE);
+				}
+			}
+			else
+			if (strcmp(queryType,"SELECT") == 0)
+			{
+				write_log(query);
+				select_handler(query);
 				printf("%s\n",respond);
 				if (tmp = send(new_socket,(void*)respond,sizeof(respond),0) < 0)
 				{
